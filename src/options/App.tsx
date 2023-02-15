@@ -12,7 +12,7 @@ import {
 import ProviderSelect from './ProviderSelect'
 
 function OptionsPage() {
-  const [triggerMode, setTriggerMode] = useState<TriggerMode>(TriggerMode.Always)
+  const [triggerMode, setTriggerMode] = useState<TriggerMode>(TriggerMode.AtGPT)
   const [language, setLanguage] = useState<Language>(Language.Auto)
   const { setToast } = useToasts()
 
