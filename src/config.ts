@@ -3,26 +3,12 @@ import Browser from 'webextension-polyfill'
 
 export enum TriggerMode {
   Always = 'always',
-  QuestionMark = 'questionMark',
-  Manually = 'manually',
+  AtGPT = 'atGPT',
 }
 
 export const TRIGGER_MODE_TEXT = {
-  [TriggerMode.Always]: { title: 'Always', desc: 'ChatGPT is queried on every search' },
-  [TriggerMode.QuestionMark]: {
-    title: 'Question Mark',
-    desc: 'When your query ends with a question mark (?)',
-  },
-  [TriggerMode.Manually]: {
-    title: 'Manually',
-    desc: 'ChatGPT is queried when you manually click a button',
-  },
-}
-
-export enum Theme {
-  Auto = 'auto',
-  Light = 'light',
-  Dark = 'dark',
+  [TriggerMode.Always]: { title: '始终触发', desc: '任意文本消息都会触发ChatGPT响应' },
+  [TriggerMode.AtGPT]: { title: '命令触发', desc: '只有消息中包含"@gpt"关键字才会触发ChatGPT响应' },
 }
 
 export enum Language {
@@ -38,8 +24,7 @@ export enum Language {
 }
 
 const userConfigWithDefaultValue = {
-  triggerMode: TriggerMode.Always,
-  theme: Theme.Auto,
+  triggerMode: TriggerMode.AtGPT,
   language: Language.Auto,
 }
 

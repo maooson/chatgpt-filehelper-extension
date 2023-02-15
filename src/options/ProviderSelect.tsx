@@ -23,11 +23,11 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
   const save = useCallback(async () => {
     if (tab === ProviderType.GPT3) {
       if (!apiKeyBindings.value) {
-        alert('Please enter your OpenAI API key')
+        alert('请输入OpenAI API key')
         return
       }
       if (!model || !models.includes(model)) {
-        alert('Please select a valid model')
+        alert('请选择正确的语言模型')
         return
       }
     }
@@ -37,25 +37,26 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
         apiKey: apiKeyBindings.value,
       },
     })
-    setToast({ text: 'Changes saved', type: 'success' })
+    setToast({ text: 'AI源切换成功', type: 'success' })
   }, [apiKeyBindings.value, model, models, setToast, tab])
 
   return (
-    <div className="flex flex-col gap-3">
-      <Tabs value={tab} onChange={(v) => setTab(v as ProviderType)}>
-        <Tabs.Item label="ChatGPT webapp" value={ProviderType.ChatGPT}>
-          The API that powers ChatGPT webapp, free, but sometimes unstable
+    <div className="flex flex-col gap-4">
+      <Tabs align="center" leftSpace={0} style={{ display: "block" }} value={tab} onChange={(v) => setTab(v as ProviderType)}>
+        <Tabs.Item  label="ChatGPT网页端" value={ProviderType.ChatGPT}>
+          通过ChatGPT网页端接入，免费，但接口不够稳定
         </Tabs.Item>
         <Tabs.Item label="OpenAI API" value={ProviderType.GPT3}>
           <div className="flex flex-col gap-2">
             <span>
-              OpenAI official API, more stable,{' '}
-              <span className="font-semibold">charge by usage</span>
+              通过OpenAI官方API接入，比较稳定{' '}
+              <span className="font-semibold">需要按需付费</span>
             </span>
             <div className="flex flex-row gap-2">
               <Select
                 scale={2 / 3}
                 value={model}
+                style={{ height: 36 }}
                 onChange={(v) => setModel(v as string)}
                 placeholder="model"
               >
@@ -65,23 +66,23 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
                   </Select.Option>
                 ))}
               </Select>
-              <Input htmlType="password" label="API key" scale={2 / 3} {...apiKeyBindings} />
+              <Input auto htmlType="password" label="API key" {...apiKeyBindings} />
             </div>
             <span className="italic text-xs">
-              You can find or create your API key{' '}
+              如何获取或创建你的OpenAI API key，请点击{' '}
               <a
                 href="https://platform.openai.com/account/api-keys"
                 target="_blank"
                 rel="noreferrer"
               >
-                here
+                此处
               </a>
             </span>
           </div>
         </Tabs.Item>
       </Tabs>
-      <Button scale={2 / 3} ghost style={{ width: 20 }} type="success" onClick={save}>
-        Save
+      <Button scale={2 / 3} ghost auto type="success-light" onClick={save}>
+        保存
       </Button>
     </div>
   )

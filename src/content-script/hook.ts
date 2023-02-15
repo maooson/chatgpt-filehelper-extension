@@ -1,6 +1,6 @@
 import { withOptionsSatisfied } from './utils'
 
-const botNickName: string = "GPT"
+const botNickName: string = "gpt"
 
 export async function pageScript() {
   console.clear();
