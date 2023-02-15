@@ -44,52 +44,42 @@ export async function pageScript() {
 
   if (appElement && app) {
     const store = await app.config.globalProperties.$store;
-    const chatState = await store.state.currentChatState;
-
-    if (chatState !== "logined") return;
+    // const chatState = await store.state.currentChatState;
+    // if (chatState !== "logined") return;
 
     const mutations = store?._mutations;
-    const actions = store?._actions;
     if (mutations) {
       if (mutations?.addMsgList.length) {
         const addMsgListFunc = mutations.addMsgList[0];
         mutations.addMsgList[0] = function (e: any, t: any) {
-          postMessage(t)
-          addMsgListFunc(e, t)
+          if (e.length > 0) {
+            postMessage(e[0])
+            addMsgListFunc(e, t)
+          }
         }
       }
 
       if (mutations?.addTextMsg.length) {
         const addTextMsgFunc = mutations.addTextMsg[0];
         mutations.addTextMsg[0] = function (e: any, t: any) {
-          postMessage(t)
+          postMessage(e)
           addTextMsgFunc(e, t)
         }
       }
     }
 
-    if (actions) {
-      // 增加chatgpt回复消息的事件监听器
-      if (actions.sendMessage.length) {
-        window.addEventListener(
-          'filehelper:message:gpt_reply',
-          async (e: any) => {
-            console.info(`Event: ${e}, Message: ${e.detail}`)
-            if (e.detail.content) {
-              const msg = {
-                Content: e.detail.content,
-                MsgTypeText: "MSGTYPE_TEXT"
-              }
-
-              const store = await app.config.globalProperties.$store;
-              const sendMessageFunc = actions.sendMessage[0];
-              sendMessageFunc(store, msg)
-            }
-          },
-          false,
-        )
-      }
-    }
+    // 增加chatgpt回复消息的事件监听器
+    window.addEventListener(
+      'filehelper:message:gpt_reply',
+      async (e: any) => {
+        console.debug(`GPT Reply Message: ${e.detail}`)
+        const store = await app.config.globalProperties.$store;
+        if (e.detail && store.dispatch) {
+          store.dispatch("sendMessage", e.detail);
+        }
+      },
+      false,
+    )
   }
 }
 
