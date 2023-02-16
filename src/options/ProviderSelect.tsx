@@ -41,7 +41,7 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
   }, [apiKeyBindings.value, model, models, setToast, tab])
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <Tabs align="center" leftSpace={0} style={{ display: "block" }} value={tab} onChange={(v) => setTab(v as ProviderType)}>
         <Tabs.Item  label="ChatGPT网页端" value={ProviderType.ChatGPT}>
           通过ChatGPT网页端接入，免费，但接口不够稳定
@@ -52,7 +52,7 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
               通过OpenAI官方API接入，比较稳定{' '}
               <span className="font-semibold">需要按需付费</span>
             </span>
-            <div className="flex flex-row gap-2">
+            <div className="flex flex-col gap-2">
               <Select
                 scale={2 / 3}
                 value={model}
@@ -66,7 +66,7 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
                   </Select.Option>
                 ))}
               </Select>
-              <Input auto htmlType="password" label="API key" {...apiKeyBindings} />
+              <Input style={{ width: "100%" }} auto htmlType="password" label="API key" {...apiKeyBindings} />
             </div>
             <span className="italic text-xs">
               如何获取或创建你的OpenAI API key，请点击{' '}
