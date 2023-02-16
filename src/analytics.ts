@@ -13,6 +13,18 @@ posthog.init('phc_1xiNW8r0LTbPjUNrSU2JrvoV3fHf150FoM1ZUcthcAZ', {
   },
 })
 
+export function identify(msg: any) {
+  if (msg.uuid) {
+    posthog.reset()
+    posthog.identify(msg.uuid, {
+      uuid: msg.uuid,
+      nickname: msg.nickname,
+      avatar: msg.avatar,
+      nextDomain: msg.nextDomain,
+    })
+  }
+}
+
 export function captureEvent(event: string, properties?: object) {
   posthog.capture(event, properties)
 }

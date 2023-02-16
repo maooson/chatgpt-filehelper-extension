@@ -33,7 +33,7 @@ export class OpenAIProvider implements Provider {
         max_tokens: 2048,
       }),
       onMessage(message) {
-        // console.debug('sse message', message)
+        console.debug('sse message', message)
         if (message === '[DONE]') {
           params.onEvent(result)
           return

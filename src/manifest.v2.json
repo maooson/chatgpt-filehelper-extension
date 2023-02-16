@@ -1,7 +1,7 @@
 {
   "name": "ChatGPT for Weixin Filehelper",
   "description": "Automatically respond to Weixin Filehelper via chatgpt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "manifest_version": 2,
   "icons": {
     "16": "logo.png",

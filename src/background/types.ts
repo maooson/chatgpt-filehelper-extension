@@ -3,6 +3,9 @@ export type ContentType = 'text'
 export type FileHelperMessage = {
   actualSender: string,
   question: string
+  nickname: string
+  avatar: string
+  uuid: string
 }
 
 export type GptRequest = {

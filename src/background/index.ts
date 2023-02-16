@@ -46,7 +46,7 @@ async function callGPT(port: Browser.Runtime.Port, request: types.FileHelperMess
   }
 
   if (!gptRequest.conversationId && providerConfigs.provider === ProviderType.GPT3) {
-    gptRequest.conversationId = request.actualSender
+    gptRequest.conversationId = request.actualSender || uuidv4()
   }
 
   const { cleanup } = await provider.callGPT({
