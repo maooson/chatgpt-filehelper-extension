@@ -59,7 +59,7 @@ function OptionsPage() {
           <a className="normal-case text-xl">ChatGPT for Wechat</a>
         </div>
         <div className="navbar-end">
-          <span className="badge">文件传输助手版</span>
+          <a href="https://filehelper.weixin.qq.com" target="_blank"><span className="badge">文件传输助手版</span></a>
         </div>
       </div>
       <div className="hero bg-gradient-to-b from-purple-500 to-pink-500">
@@ -71,9 +71,9 @@ function OptionsPage() {
           </div>
         </div>
       </div>
-      <main className="mx-auto mx-4">
+      <main className="mx-4 pb-4">
         <div className="flex flex-col w-full">
-          <div className="grid card mt-4">
+          <div className="grid mt-4">
             <h3 className="text-lg">触发模式</h3>
             <Radio.Group
               value={triggerMode}
@@ -90,7 +90,7 @@ function OptionsPage() {
               })}
             </Radio.Group>
           </div>
-          <div className="grid card mt-4">
+          <div className="grid mt-4">
             <h3 className="text-lg">选择语言</h3>
             <Text className="my-1">
               ChatGPT响应中使用的语言，推荐使用<span className="italic">auto</span>
@@ -108,11 +108,11 @@ function OptionsPage() {
               ))}
             </Select>
           </div>
-          <div className="grid card mt-4">
+          <div className="grid mt-4">
             <h3 className="text-lg">选择AI源</h3>
             <ProviderSelect />
           </div>
-          <div className="grid card my-4">
+          <div className="grid my-4">
             <h3 className="text-lg">其他设置</h3>
             <div className="flex flex-row gap-4">
               <Toggle initialChecked disabled />
@@ -123,9 +123,9 @@ function OptionsPage() {
           </div>
         </div>
       </main>
-      <footer className="footer w-auto p-4 bg-neutral text-neutral-content">
+      <footer className="footer sticky bottom-0 left-0 right-0 w-auto p-4 bg-neutral text-white">
         <div className="w-full place-items-center">
-          <span className="footer-title">POWERED BY AOW.ME</span>
+          <span className="footer-title mt-2">&copy; 2023 <a className="text-white" href="https://aow.me" target="_blank">aow.me</a> 版权所有</span>
         </div>
       </footer>
     </div>

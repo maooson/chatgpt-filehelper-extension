@@ -1,6 +1,6 @@
 {
-  "name": "ChatGPT for Weixin Filehelper",
-  "description": "Automatically respond to Weixin Filehelper via chatgpt",
+  "name": "ChatGPT for Wechat（微信文件传输助手版）",
+  "description": "Automatically respond to Filehelper via chatgpt, 一个浏览器插件由ChatGPT自动响应微信文件传输助手中的消息",
   "version": "1.0.0",
   "manifest_version": 3,
   "icons": {
