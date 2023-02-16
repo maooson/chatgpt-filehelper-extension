@@ -66,7 +66,7 @@ function OptionsPage() {
         <div className="hero-overlay bg-opacity-60"></div>
         <div className="hero-content text-center text-neutral-content">
           <div className="max-w-md">
-            <p className="mb-5 text-base">如果你觉得此插件对你有用，可以扫描下方二维码支持我</p>
+            <p className="mb-5 text-base">开发不易，请我喝杯咖啡吧，感谢您的支持！</p>
             <img className="w-48 h-48" src={"https://models.aoq.me/zansm.jpg"} alt="赞赏码" />
           </div>
         </div>
