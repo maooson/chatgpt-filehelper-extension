@@ -1,4 +1,4 @@
-import { withOptionsSatisfied } from './utils'
+import { stripHTMLTags, withCommandSatisfied, withContentLengthSatisfied } from './utils'
 
 const botNickName: string = "gpt"
 let isFirstLogin = true;
@@ -9,19 +9,6 @@ export async function pageScript() {
   // Vue app hook
   const appElement = document.querySelector("#app")
   const app = await appElement?.__vue_app__;
-
-  const removeImgTag = (str: string) => {
-    const imgReg = /<img.*?(?:>|\/>)/gi
-
-    const imgArr = str.match(imgReg)
-    if (imgArr != null && imgArr != undefined) {
-      for (const vm of imgArr) {
-        str = str.replace(vm, '*')
-      }
-    }
-
-    return str
-  }
 
   const postMessage = async (msg: any) => {
     console.debug('Message add success: ', msg)
@@ -36,13 +23,17 @@ export async function pageScript() {
     // 只监听文本消息
     const { MsgType, Content } = msg;
     if (MsgType === 1 && Content.length > 4) {
+      const text = stripHTMLTags(Content)
+
       // 判断是否有触发关键词
-      if (!withOptionsSatisfied(Content, botNickName)) {
+      if (!withCommandSatisfied(text, botNickName)) {
         return
       }
 
-      let content = Content.replaceAll(`@${botNickName}`, '').trim()
-      content = removeImgTag(content).trim()
+      const content = text.replaceAll(`@${botNickName}`, '').trim()
+      if (!withContentLengthSatisfied(content)) {
+        return
+      }
 
       const newMessageEvent = new CustomEvent('filehelper:message:add', {
         detail: { uuid: uuid, nickname: nickname, text: content }

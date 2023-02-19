@@ -1,4 +1,4 @@
-export function withOptionsSatisfied(content: string, botNickName: string) {
+export function withCommandSatisfied(content: string, botNickName: string) {
   if (!botNickName) {
     return false
   }
@@ -9,7 +9,17 @@ export function withOptionsSatisfied(content: string, botNickName: string) {
     return false
   }
 
-  content = content.replaceAll(isAtChatGPTBot, '').trim()
+  return true
+}
+
+export function stripHTMLTags(html: string) {
+  // 使用正则表达式匹配HTML标签
+  const regex = /<[^>]+>/g;
+  // 用空字符串替换所有匹配的标签
+  return html.replace(regex, '');
+}
+
+export function withContentLengthSatisfied(content: string) {
   if (content.length < 2) {
     return false
   }

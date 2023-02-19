@@ -10,7 +10,10 @@ const HAS_RATELIMIT = false
 const SHOW_COPYRIGHT = false
 
 // 提问次数限制
+const QUEUE_THRESHOLD = 5
 const cache = new ExpiryMap(10 * 60 * 1000)
+const messageQueue: any[] = []
+let isProcessing = false
 
 function registerFileHelperHook(hook: string) {
   const script = hook + '.js'
@@ -22,73 +25,52 @@ function registerFileHelperHook(hook: string) {
   document.head.appendChild(s)
 }
 
-window.addEventListener(
-  'filehelper:user:session',
-  (e: any) => {
-    const msg = e.detail;
-    // console.info(`User: ${msg.uuid}, detail: `, msg)
-    identify(msg)
-  },
-  false,
-)
+// 调用GPT获得问题响应
+function callGpt(message: any) {
+  isProcessing = true
+  const { uuid, nickname, text } = message
 
-window.addEventListener(
-  'filehelper:message:add',
-  (e: any) => {
-    // console.info('Got a new @gpt message', e.detail)
-    const { uuid, nickname, text } = e.detail
-
-    // 判断是否有触发关键词
-    if (text) {
-      if (HAS_RATELIMIT && !withRateLimitSatisfied("fileHelper")) {
-        const response = {
-          reply: '抱歉，你的提问太频繁了，请等一会儿再来问吧~',
-        }
-        reply(response)
-        return
-      }
-
-      console.info(`🤖 Trigger GPT: ${text}`)
-      const port = Browser.runtime.connect()
-      const listener = (response: any) => {
-        if (response && response.reply) {
-          reply(response)
-          captureEvent('chatgpt:response:success', { ...response })
-        } else if (response.error) {
-          response.reply = `抱歉出错啦，错误代码：${response.error}，请到开发者网站看一下吧https://aow.me`
-          reply(response)
-          captureEvent('chatgpt:response:error', { ...response })
-        } else {
-          console.error('Call ChatGPT EXCEPTION')
-        }
-      }
-      port.onMessage.addListener(listener)
-      port.postMessage({
-        actualSender: uuid || 'filehelper',
-        nickname: nickname,
-        uuid: uuid,
-        question: text,
-      })
-      return () => {
-        port.onMessage.removeListener(listener)
-        port.disconnect()
-      }
+  console.info(`🤖 Trigger GPT: ${text}`)
+  const port = Browser.runtime.connect()
+  const listener = (response: any) => {
+    isProcessing = false
+    if (response && response.reply) {
+      reply(response)
+      captureEvent('chatgpt:response:success', { ...response })
+    } else if (response.error) {
+      response.reply = `抱歉出错啦，错误代码：${response.error}，请到开发者网站看一下吧https://chatgpt4filehelper.aow.me`
+      reply(response)
+      captureEvent('chatgpt:response:error', { ...response })
+    } else {
+      console.error('Call ChatGPT EXCEPTION')
     }
-  },
-  false,
-)
-
-function withRateLimitSatisfied(actualSender: string) {
-  const count = cache.get(actualSender) || 0
-
-  if (count < GPT_RATELIMIT) {
-    cache.set(actualSender, count + 1)
-    return true
   }
-
-  return false
+  port.onMessage.addListener(listener)
+  port.postMessage({
+    actualSender: uuid || 'filehelper',
+    nickname: nickname,
+    uuid: uuid,
+    question: text,
+  })
+  return () => {
+    port.onMessage.removeListener(listener)
+    port.disconnect()
+  }
 }
 
+// 回答当前队列中的第一个消息
+function processNext() {
+  // 如果队列为空，结束函数
+  if (messageQueue.length === 0) {
+    return;
+  }
+
+  // 取出队列中的第一个消息，并回答
+  const message = messageQueue.shift();
+  callGpt(message);
+}
+
+// 回答消息，并在回答完后调用 processNext 处理下一个
 function reply(response: any) {
   console.info('😀 ChatGPT response: ', response)
 
@@ -112,6 +94,72 @@ function reply(response: any) {
 
     window.dispatchEvent(event)
   }
+
+  // 处理下一条消息
+  processNext()
+}
+
+// 发送一条消息告知当前排队人数
+function notifyQueueStatus(queueLength: number) {
+  const msg = {
+    MsgTypeText: MSGTYPE_TEXT,
+    Content: `哎呀，我还有${queueLength}个问题要回答呢，让我歇会儿吧~~`,
+  }
+
+  const event = new CustomEvent('filehelper:message:gpt_reply', {
+    detail: msg,
+  })
+
+  window.dispatchEvent(event)
+}
+
+window.addEventListener(
+  'filehelper:user:session',
+  (e: any) => {
+    const msg = e.detail;
+    // console.info(`User: ${msg.uuid}, detail: `, msg)
+    identify(msg)
+  },
+  false,
+)
+
+window.addEventListener(
+  'filehelper:message:add',
+  (e: any) => {
+    console.info('Got a new @gpt message', e.detail)
+    if (HAS_RATELIMIT && !withRateLimitSatisfied("fileHelper")) {
+      const response = {
+        reply: '抱歉，你的提问太频繁了，请等一会儿再来问吧~',
+      }
+      reply(response)
+      return
+    }
+
+    // 如果队列为空且没有正在处理中的问题，无则直接回答
+    if (!isProcessing && messageQueue.length === 0) {
+      callGpt(e.detail);
+    }
+    // 否则加入队列排队
+    else {
+      messageQueue.push(e.detail);
+      // 如果队列长度超过阈值，发送一条消息告知当前排队问题数量
+      if (messageQueue.length > QUEUE_THRESHOLD) {
+        notifyQueueStatus(messageQueue.length);
+      }
+    }
+  },
+  false,
+)
+
+function withRateLimitSatisfied(actualSender: string) {
+  const count = cache.get(actualSender) || 0
+
+  if (count < GPT_RATELIMIT) {
+    cache.set(actualSender, count + 1)
+    return true
+  }
+
+  return false
 }
 
 console.log('DOM loaded and register fileHelper hook.')
