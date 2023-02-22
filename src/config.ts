@@ -23,9 +23,41 @@ export enum Language {
   Portuguese = 'portuguese',
 }
 
+// 提问队列消息积压 n 条触发提醒
+export enum QueueThreshold {
+  T5 = 5,
+  T10 = 10,
+  T15 = 15,
+  NONE = 999,
+}
+
+export const QUEUE_THRESHOLD_TEXT = {
+  [QueueThreshold.T5]: { title: '5条', desc: '提问队列积压 5 条后触发告警（推荐设置）' },
+  [QueueThreshold.T10]: { title: '10条', desc: '提问队列积压 10 条后触发告警' },
+  [QueueThreshold.T15]: { title: '10条', desc: '提问队列积压 10 条后触发告警' },
+  [QueueThreshold.NONE]: { title: '不限制', desc: '谨慎选择，建议告知用户当前的排队情况' },
+}
+
+// 单用户 10 分钟内提问次数限制
+export enum GptRateLimit {
+  R5 = 5,
+  R10 = 10,
+  R15 = 15,
+  NONE = 999,
+}
+
+export const GPT_RATELIMIT_TEXT = {
+  [GptRateLimit.R5]: { title: '5次', desc: '单用户 10 分钟可提问 5 次（推荐设置）' },
+  [GptRateLimit.R10]: { title: '10次', desc: '单用户 10 分钟可提问 10 次' },
+  [GptRateLimit.R15]: { title: '15次', desc: '单用户 10 分钟可提问 15 次' },
+  [GptRateLimit.NONE]: { title: '不限制', desc: '谨慎选择，建议把提问机会留给更多人' },
+}
+
 const userConfigWithDefaultValue = {
   triggerMode: TriggerMode.AtGPT,
   language: Language.Auto,
+  queueThreshold: QueueThreshold.T5,
+  gptRateLimit: GptRateLimit.R5
 }
 
 export type UserConfig = typeof userConfigWithDefaultValue
