@@ -1,85 +1,112 @@
 import ExpiryMap from 'expiry-map'
-import { v4 as uuidv4 } from 'uuid'
 import Browser from 'webextension-polyfill'
 import { getProviderConfigs, ProviderType } from '../config.js'
-import { ChatGPTProvider, getAccessToken, sendMessageFeedback } from './providers/chatgpt.js'
-import { OpenAIProvider } from './providers/openai.js'
+import { ChatGPTWeb, getAccessToken } from './providers/chatgpt-web.js'
+import { ChatGPTAPI } from './providers/chatgpt-api.js'
 import * as types from './types'
+import Keyv from 'keyv'
+import QuickLRU from 'quick-lru'
 
 // 同一个conversation的会话保持时间
 const threadCache = new ExpiryMap(30 * 60 * 1000)
+const DEFAULT_SYSTEM_MESSAGE = '现在你是一个在微信群的AI助手，你的名字是ChatGirl，Powered by chatgpt4wechat.com';
+const messageStore = new Keyv<types.ChatMessage, any>({
+  namespace: 'c4w',
+  store: new QuickLRU<string, types.ChatMessage>({ maxSize: 1000 }),
+  serialize: JSON.stringify,
+  deserialize: JSON.parse
+})
 
-function generateThreadKey(request: types.FileHelperMessage, provider: string) {
+export type FileHelperMessage = {
+  actualSender: string,
+  question: string
+  nickname: string
+  avatar: string
+  uuid: string
+}
+
+export interface ChatProvider {
+  sendMessage(text: string, params: types.SendMessageOptions | types.SendMessageBrowserOptions): Promise<types.ChatMessage>
+}
+
+function generateThreadKey(request: FileHelperMessage, provider: string) {
   return `${provider}#${request.actualSender}`
 }
 
-async function callGPT(port: Browser.Runtime.Port, request: types.FileHelperMessage) {
+async function callGPT(port: Browser.Runtime.Port, request: FileHelperMessage) {
   const providerConfigs = await getProviderConfigs()
-
-  let provider: types.Provider
-  if (providerConfigs.provider === ProviderType.ChatGPT) {
-    const token = await getAccessToken()
-    provider = new ChatGPTProvider(token)
-  } else if (providerConfigs.provider === ProviderType.GPT3) {
-    const { apiKey, model } = providerConfigs.configs[ProviderType.GPT3]!
-    provider = new OpenAIProvider(apiKey, model)
-  } else {
-    throw new Error(`Unknown provider ${providerConfigs.provider}`)
-  }
 
   const controller = new AbortController()
   port.onDisconnect.addListener(() => {
     controller.abort()
-    cleanup?.()
   })
 
   const threadKey = generateThreadKey(request, providerConfigs.provider)
   const threadValue = threadCache.get(threadKey)
 
-  const gptRequest: types.GptRequest = {
-    prompt: request.question,
-  }
-  if (threadValue && threadValue.length > 4) {
-    const parts = threadValue.split('^^')
-    gptRequest.conversationId = parts[0]
-    gptRequest.parentMessageId = parts[1] || uuidv4()
+  let opts: types.SendMessageOptions | types.SendMessageBrowserOptions = {
+    stream: true,
+    abortSignal: controller.signal
   }
 
-  if (!gptRequest.conversationId && providerConfigs.provider === ProviderType.GPT3) {
-    gptRequest.conversationId = request.actualSender || uuidv4()
-  }
+  let api: ChatProvider;
+  if (providerConfigs.provider === ProviderType.ChatGPTWeb) {
+    const token = await getAccessToken()
+    api = new ChatGPTWeb({ accessToken: token, debug: true })
 
-  const { cleanup } = await provider.callGPT({
-    request: gptRequest,
-    signal: controller.signal,
-    onEvent(resp: types.GptResponse) {
-      if (resp.conversationId && resp.messageId) {
-        // 消息完成后设置threadKey
-        threadCache.set(threadKey, `${resp.conversationId}^^${resp.messageId}`)
-        port.postMessage({ ...request, reply: resp.completion })
-        return
+    const threadParts = (threadValue && threadValue.length > 4) ? threadValue.split('^^') : []
+    if (threadParts.length == 2) {
+      opts = {
+        ...opts,
+        conversationId: threadParts[0],
+        parentMessageId: threadParts[1],
       }
-    },
-  })
+    }
+  } else if (providerConfigs.provider === ProviderType.ChatGPTAPI) {
+    const { apiKey, systemMessage } = providerConfigs.configs[ProviderType.ChatGPTAPI]!
+    api = new ChatGPTAPI({
+      apiKey,
+      systemMessage: systemMessage || DEFAULT_SYSTEM_MESSAGE,
+      messageStore: messageStore,
+      debug: true
+    })
+
+    if (threadValue) {
+      opts = {
+        ...opts,
+        parentMessageId: threadValue,
+      }
+    }
+  } else {
+    throw new Error(`Unknown provider ${providerConfigs.provider}`)
+  }
+
+  await api.sendMessage(request.question, opts)
+    .then((result) => {
+      if (result && result.id) {
+        // 消息完成后设置threadKey
+        if (providerConfigs.provider === ProviderType.ChatGPTWeb) {
+          threadCache.set(threadKey, `${result.conversationId}^^${result.id}`)
+        } else if (providerConfigs.provider === ProviderType.ChatGPTAPI) {
+          threadCache.set(threadKey, result.id)
+        }
+        port.postMessage({ ...request, reply: result.text })
+      }
+    })
+    .catch((err: any) => {
+      port.postMessage({ ...request, error: err.message })
+    })
 }
 
 Browser.runtime.onConnect.addListener((port: any) => {
   port.onMessage.addListener(async (request: any) => {
     console.debug('ChatGPT: received msg', request)
-    try {
-      await callGPT(port, request)
-    } catch (err: any) {
-      console.log(err)
-      port.postMessage({ ...request, error: err.message })
-    }
+    await callGPT(port, request)
   })
 })
 
 Browser.runtime.onMessage.addListener(async (message: any) => {
-  if (message.type === 'FEEDBACK') {
-    const token = await getAccessToken()
-    await sendMessageFeedback(token, message.data)
-  } else if (message.type === 'OPEN_OPTIONS_PAGE') {
+  if (message.type === 'OPEN_OPTIONS_PAGE') {
     Browser.runtime.openOptionsPage()
   } else if (message.type === 'GET_ACCESS_TOKEN') {
     return getAccessToken()

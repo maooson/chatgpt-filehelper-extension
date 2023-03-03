@@ -53,11 +53,32 @@ export const GPT_RATELIMIT_TEXT = {
   [GptRateLimit.NONE]: { title: '不限制', desc: '谨慎选择，建议把提问机会留给更多人' },
 }
 
+// 会话有效期
+export enum GptSessionTimeout {
+  S30m = 30,
+  S2h = 120,
+  S1d = 1440,
+  S1w = 10080,
+}
+
+export const GPT_SESSION_TIMEOUT_TEXT = {
+  [GptSessionTimeout.S30m]: { title: '30分钟', desc: '单用户会话保持 30 分钟（推荐设置）' },
+  [GptSessionTimeout.S2h]: { title: '2小时', desc: '单用户会话保持 2 小时（适合小群）' },
+  [GptSessionTimeout.S1d]: { title: '1天', desc: '单用户会话保持 1 天（适合深度对话）' },
+  [GptSessionTimeout.S1w]: {
+    title: '1周',
+    desc: '单用户会话保持 1 周（适合专业人士，比如写作等）',
+  },
+}
+
 const userConfigWithDefaultValue = {
   triggerMode: TriggerMode.AtGPT,
   language: Language.Auto,
   queueThreshold: QueueThreshold.T5,
-  gptRateLimit: GptRateLimit.R5
+  gptRateLimit: GptRateLimit.R5,
+  sessionTimeout: GptSessionTimeout.S30m,
+  autoWelcome: false,
+  botState: true,
 }
 
 export type UserConfig = typeof userConfigWithDefaultValue
@@ -73,30 +94,32 @@ export async function updateUserConfig(updates: Partial<UserConfig>) {
 }
 
 export enum ProviderType {
-  ChatGPT = 'chatgpt',
+  ChatGPTWeb = 'chatgpt',
+  ChatGPTAPI = 'chatgpt-api',
   GPT3 = 'gpt3',
 }
 
-interface GPT3ProviderConfig {
+interface ChatGPTApiProviderConfig {
   model: string
   apiKey: string
+  systemMessage: string
 }
 
 export interface ProviderConfigs {
   provider: ProviderType
   configs: {
-    [ProviderType.GPT3]: GPT3ProviderConfig | undefined
+    [ProviderType.ChatGPTAPI]: ChatGPTApiProviderConfig | undefined
   }
 }
 
 export async function getProviderConfigs(): Promise<ProviderConfigs> {
-  const { provider = ProviderType.ChatGPT } = await Browser.storage.local.get('provider')
-  const configKey = `provider:${ProviderType.GPT3}`
+  const { provider = ProviderType.ChatGPTWeb } = await Browser.storage.local.get('provider')
+  const configKey = `provider:${ProviderType.ChatGPTAPI}`
   const result = await Browser.storage.local.get(configKey)
   return {
     provider,
     configs: {
-      [ProviderType.GPT3]: result[configKey],
+      [ProviderType.ChatGPTAPI]: result[configKey],
     },
   }
 }
@@ -107,6 +130,6 @@ export async function saveProviderConfigs(
 ) {
   return Browser.storage.local.set({
     provider,
-    [`provider:${ProviderType.GPT3}`]: configs[ProviderType.GPT3],
+    [`provider:${ProviderType.ChatGPTAPI}`]: configs[ProviderType.ChatGPTAPI],
   })
 }

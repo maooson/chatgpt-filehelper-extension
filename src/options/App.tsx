@@ -19,7 +19,7 @@ function OptionsPage() {
   const [triggerMode, setTriggerMode] = useState<TriggerMode>(TriggerMode.AtGPT)
   const [language, setLanguage] = useState<Language>(Language.Auto)
   const [queueThreshold, setQueueThreshold] = useState<QueueThreshold>(QueueThreshold.T5)
-  const [gptRateLimit, setGptRateLimit] = useState<GptRateLimit>(GptRateLimit.R5)
+  const [gptRateLimit, setGptRateLimit] = useState<GptRateLimit>(GptRateLimit.NONE)
   const { setToast } = useToasts()
 
   useEffect(() => {
@@ -132,7 +132,7 @@ function OptionsPage() {
       </div>
       <main className="mx-4 pb-4">
         <div className="flex flex-col w-full">
-          <div className="grid mt-4">
+          <div className="grid mt-4 hidden">
             <h3 className="text-lg">触发模式</h3>
             <Radio.Group
               value={triggerMode}
@@ -148,6 +148,10 @@ function OptionsPage() {
                 )
               })}
             </Radio.Group>
+          </div>
+          <div className="grid mt-4">
+            <h3 className="text-lg">选择AI源</h3>
+            <ProviderSelect />
           </div>
           <div className="grid mt-4">
             <h3 className="text-lg">选择语言</h3>
@@ -167,11 +171,7 @@ function OptionsPage() {
               ))}
             </Select>
           </div>
-          <div className="grid mt-4">
-            <h3 className="text-lg">选择AI源</h3>
-            <ProviderSelect />
-          </div>
-          <div className="grid mt-4">
+          <div className="grid mt-4 hidden">
             <h3 className="text-lg">单用户提问频率</h3>
             <Text className="my-1">
               设置单个用户在 10 分钟内提问的次数
@@ -180,14 +180,12 @@ function OptionsPage() {
               value={gptRateLimit}
               onChange={(val) => onGptRateLimitChange(val as GptRateLimit)}
             >
-              {Object.entries(GPT_RATELIMIT_TEXT).map(([value, texts]) => {
-                return (
-                  <Radio key={value} value={value} className="radio radio-primary">
-                    {texts.title}
-                    <Radio.Description>{texts.desc}</Radio.Description>
-                  </Radio>
-                )
-              })}
+              {Object.entries(GPT_RATELIMIT_TEXT).map(([value, texts]) => (
+                <Radio key={value} value={value} className="radio radio-primary">
+                  {texts.title}
+                  <Radio.Description>{texts.desc}</Radio.Description>
+                </Radio>
+              ))}
             </Radio.Group>
           </div>
           <div className="grid mt-4">
@@ -197,17 +195,15 @@ function OptionsPage() {
               value={queueThreshold}
               onChange={(val) => onQueueThresholdChange(val as QueueThreshold)}
             >
-              {Object.entries(QUEUE_THRESHOLD_TEXT).map(([value, texts]) => {
-                return (
-                  <Radio key={value} value={value} className="radio radio-primary">
-                    {texts.title}
-                    <Radio.Description>{texts.desc}</Radio.Description>
-                  </Radio>
-                )
-              })}
+              {Object.entries(QUEUE_THRESHOLD_TEXT).map(([value, texts]) => (
+                <Radio key={value} value={value} className="radio radio-primary">
+                  {texts.title}
+                  <Radio.Description>{texts.desc}</Radio.Description>
+                </Radio>
+              ))}
             </Radio.Group>
           </div>
-          <div className="grid my-4">
+          <div className="grid my-4 hidden">
             <h3 className="text-lg">其他设置</h3>
             <div className="flex flex-row gap-4">
               <Toggle initialChecked disabled />

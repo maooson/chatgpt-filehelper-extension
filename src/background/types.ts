@@ -1,162 +1,87 @@
-export type ContentType = 'text'
+import Keyv from 'keyv'
 
-export type FileHelperMessage = {
-  actualSender: string,
-  question: string
-  nickname: string
-  avatar: string
-  uuid: string
+export type Role = 'user' | 'assistant' | 'system'
+
+export type FetchFn = typeof fetch
+
+export type ChatGPTAPIOptions = {
+  apiKey: string
+
+  /** @defaultValue `'https://api.openai.com'` **/
+  apiBaseUrl?: string
+
+  /** @defaultValue `false` **/
+  debug?: boolean
+
+  completionParams?: Partial<
+    Omit<openai.CreateChatCompletionRequest, 'messages' | 'n'>
+  >
+
+  systemMessage?: string
+
+  /** @defaultValue `4096` **/
+  maxModelTokens?: number
+
+  /** @defaultValue `1000` **/
+  maxResponseTokens?: number
+
+  messageStore?: Keyv
+  getMessageById?: GetMessageByIdFunction
+  upsertMessage?: UpsertMessageFunction
+
+  fetch?: FetchFn
 }
 
-export type GptRequest = {
-  prompt: string
-  conversationId?: string | null
-  parentMessageId?: string | null
+export type SendMessageOptions = {
+  /** The name of a user in a multi-user chat. */
+  name?: string
+  parentMessageId?: string
+  messageId?: string
+  stream?: boolean
+  systemMessage?: string
+  timeoutMs?: number
+  onProgress?: (partialResponse: ChatMessage) => void
+  abortSignal?: AbortSignal
 }
 
-export type GptResponse = {
-  completion: string
-  conversationId?: string | null
-  messageId?: string | null
+export type MessageActionType = 'next' | 'variant'
+
+export type SendMessageBrowserOptions = {
+  conversationId?: string
+  parentMessageId?: string
+  messageId?: string
+  action?: MessageActionType
+  timeoutMs?: number
+  onProgress?: (partialResponse: ChatMessage) => void
+  abortSignal?: AbortSignal
 }
 
-export interface RequestParams {
-  request: GptRequest
-  onEvent: (event: GptResponse) => void
-  signal?: AbortSignal
-}
-
-export interface Provider {
-  callGPT(params: RequestParams): Promise<{ cleanup?: () => void }>
-}
-
-export type Role = 'user' | 'assistant'
-
-/**
- * https://chat.openapi.com/api/auth/session
- */
-export type SessionResult = {
-  /**
-   * Authenticated user
-   */
-  user: User
-
-  /**
-   * ISO date of the expiration date of the access token
-   */
-  expires: string
-
-  /**
-   * The access token
-   */
-  accessToken: string
-
-  /**
-   * If there was an error associated with this request
-   */
-  error?: string | null
-}
-
-export type User = {
-  /**
-   * ID of the user
-   */
+export interface ChatMessage {
   id: string
+  text: string
+  role: Role
+  name?: string
+  delta?: string
+  detail?: any
 
-  /**
-   * Name of the user
-   */
-  name: string
-
-  /**
-   * Email of the user
-   */
-  email?: string
-
-  /**
-   * Image of the user
-   */
-  image: string
-
-  /**
-   * Picture of the user
-   */
-  picture: string
-
-  /**
-   * Groups the user is in
-   */
-  groups: string[]
-
-  /**
-   * Features the user is in
-   */
-  features: string[]
+  // relevant for both ChatGPTAPI and ChatGPTUnofficialProxyAPI
+  parentMessageId?: string
+  // only relevant for ChatGPTUnofficialProxyAPI
+  conversationId?: string
 }
 
-/**
- * https://chat.openapi.com/backend-api/models
- */
-export type ModelsResult = {
-  /**
-   * Array of models
-   */
-  models: Model[]
+export class ChatGPTError extends Error {
+  statusCode?: number
+  statusText?: string
+  isFinal?: boolean
+  accountId?: string
 }
 
-export type Model = {
-  /**
-   * Name of the model
-   */
-  slug: string
+/** Returns a chat message from a store by it's ID (or null if not found). */
+export type GetMessageByIdFunction = (id: string) => Promise<ChatMessage|undefined>
 
-  /**
-   * Max tokens of the model
-   */
-  max_tokens: number
-
-  /**
-   * Whether or not the model is special
-   */
-  is_special: boolean
-}
-
-/**
- * https://chat.openapi.com/backend-api/moderations
- */
-export type ModerationsJSONBody = {
-  /**
-   * Input for the moderation decision
-   */
-  input: string
-
-  /**
-   * The model to use in the decision
-   */
-  model: AvailableModerationModels
-}
-
-export type AvailableModerationModels = 'text-moderation-playground'
-
-/**
- * https://chat.openapi.com/backend-api/moderations
- */
-export type ModerationsJSONResult = {
-  /**
-   * Whether or not the input is flagged
-   */
-  flagged: boolean
-
-  /**
-   * Whether or not the input is blocked
-   */
-  blocked: boolean
-
-  /**
-   * The ID of the decision
-   */
-  moderation_id: string
-}
+/** Upserts a chat message to a store. */
+export type UpsertMessageFunction = (message: ChatMessage) => Promise<void>
 
 /**
  * https://chat.openapi.com/backend-api/conversation
@@ -205,6 +130,8 @@ export type Prompt = {
   role: Role
 }
 
+export type ContentType = 'text'
+
 export type PromptContent = {
   /**
    * The content type of the prompt
@@ -217,67 +144,6 @@ export type PromptContent = {
   parts: string[]
 }
 
-/**
- * https://chat.openapi.com/backend-api/conversation/message_feedback
- */
-export type MessageFeedbackJSONBody = {
-  /**
-   * The ID of the conversation
-   */
-  conversation_id: string
-
-  /**
-   * The message ID
-   */
-  message_id: string
-
-  /**
-   * The rating
-   */
-  rating: MessageFeedbackRating
-
-  /**
-   * Tags to give the rating
-   */
-  tags?: MessageFeedbackTags[]
-
-  /**
-   * The text to include
-   */
-  text?: string
-}
-
-export type MessageFeedbackTags = 'harmful' | 'false' | 'not-helpful'
-
-export type MessageFeedbackResult = {
-  /**
-   * The message ID
-   */
-  message_id: string
-
-  /**
-   * The ID of the conversation
-   */
-  conversation_id: string
-
-  /**
-   * The ID of the user
-   */
-  user_id: string
-
-  /**
-   * The rating
-   */
-  rating: MessageFeedbackRating
-
-  /**
-   * The text the server received, including tags
-   */
-  text?: string
-}
-
-export type MessageFeedbackRating = 'thumbsUp' | 'thumbsDown'
-
 export type ConversationResponseEvent = {
   message?: Message
   conversation_id?: string
@@ -287,7 +153,7 @@ export type ConversationResponseEvent = {
 export type Message = {
   id: string
   content: MessageContent
-  role: string
+  role: Role
   user: string | null
   create_time: string | null
   update_time: string | null
@@ -303,32 +169,259 @@ export type MessageContent = {
 }
 
 export type MessageMetadata = any
-export type MessageActionType = 'next' | 'variant'
 
-export type SendMessageOptions = {
-  conversationId?: string
-  parentMessageId?: string
-  messageId?: string
-  action?: MessageActionType
-  timeoutMs?: number
-  onProgress?: (partialResponse: GptResponse) => void
-  abortSignal?: AbortSignal
-}
+export namespace openai {
+  export interface CreateChatCompletionDeltaResponse {
+    id: string
+    object: 'chat.completion.chunk'
+    created: number
+    model: string
+    choices: [
+      {
+        delta: {
+          role: Role
+          content?: string
+        }
+        index: number
+        finish_reason: string | null
+      }
+    ]
+  }
 
-export type SendConversationMessageOptions = Omit<
-  SendMessageOptions,
-  'conversationId' | 'parentMessageId'
->
-
-export class ChatGPTError extends Error {
-  statusCode?: number
-  statusText?: string
-  response?: Response
-  originalError?: Error
-}
-
-export type ChatError = {
-  error: { message: string; statusCode?: number; statusText?: string }
-  conversationId?: string
-  messageId?: string
+  /**
+   *
+   * @export
+   * @interface ChatCompletionRequestMessage
+   */
+  export interface ChatCompletionRequestMessage {
+    /**
+     * The role of the author of this message.
+     * @type {string}
+     * @memberof ChatCompletionRequestMessage
+     */
+    role: ChatCompletionRequestMessageRoleEnum
+    /**
+     * The contents of the message
+     * @type {string}
+     * @memberof ChatCompletionRequestMessage
+     */
+    content: string
+    /**
+     * The name of the user in a multi-user chat
+     * @type {string}
+     * @memberof ChatCompletionRequestMessage
+     */
+    name?: string
+  }
+  export declare const ChatCompletionRequestMessageRoleEnum: {
+    readonly System: 'system'
+    readonly User: 'user'
+    readonly Assistant: 'assistant'
+  }
+  export declare type ChatCompletionRequestMessageRoleEnum =
+    (typeof ChatCompletionRequestMessageRoleEnum)[keyof typeof ChatCompletionRequestMessageRoleEnum]
+  /**
+   *
+   * @export
+   * @interface ChatCompletionResponseMessage
+   */
+  export interface ChatCompletionResponseMessage {
+    /**
+     * The role of the author of this message.
+     * @type {string}
+     * @memberof ChatCompletionResponseMessage
+     */
+    role: ChatCompletionResponseMessageRoleEnum
+    /**
+     * The contents of the message
+     * @type {string}
+     * @memberof ChatCompletionResponseMessage
+     */
+    content: string
+  }
+  export declare const ChatCompletionResponseMessageRoleEnum: {
+    readonly System: 'system'
+    readonly User: 'user'
+    readonly Assistant: 'assistant'
+  }
+  export declare type ChatCompletionResponseMessageRoleEnum =
+    (typeof ChatCompletionResponseMessageRoleEnum)[keyof typeof ChatCompletionResponseMessageRoleEnum]
+  /**
+   *
+   * @export
+   * @interface CreateChatCompletionRequest
+   */
+  export interface CreateChatCompletionRequest {
+    /**
+     * ID of the model to use. Currently, only `gpt-3.5-turbo` and `gpt-3.5-turbo-0301` are supported.
+     * @type {string}
+     * @memberof CreateChatCompletionRequest
+     */
+    model: string
+    /**
+     * The messages to generate chat completions for, in the [chat format](/docs/guides/chat/introduction).
+     * @type {Array<ChatCompletionRequestMessage>}
+     * @memberof CreateChatCompletionRequest
+     */
+    messages: Array<ChatCompletionRequestMessage>
+    /**
+     * What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.  We generally recommend altering this or `top_p` but not both.
+     * @type {number}
+     * @memberof CreateChatCompletionRequest
+     */
+    temperature?: number | null
+    /**
+     * An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.  We generally recommend altering this or `temperature` but not both.
+     * @type {number}
+     * @memberof CreateChatCompletionRequest
+     */
+    top_p?: number | null
+    /**
+     * How many chat completion choices to generate for each input message.
+     * @type {number}
+     * @memberof CreateChatCompletionRequest
+     */
+    n?: number | null
+    /**
+     * If set, partial message deltas will be sent, like in ChatGPT. Tokens will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message.
+     * @type {boolean}
+     * @memberof CreateChatCompletionRequest
+     */
+    stream?: boolean | null
+    /**
+     *
+     * @type {CreateChatCompletionRequestStop}
+     * @memberof CreateChatCompletionRequest
+     */
+    stop?: CreateChatCompletionRequestStop
+    /**
+     * The maximum number of tokens allowed for the generated answer. By default, the number of tokens the model can return will be (4096 - prompt tokens).
+     * @type {number}
+     * @memberof CreateChatCompletionRequest
+     */
+    max_tokens?: number
+    /**
+     * Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model\'s likelihood to talk about new topics.  [See more information about frequency and presence penalties.](/docs/api-reference/parameter-details)
+     * @type {number}
+     * @memberof CreateChatCompletionRequest
+     */
+    presence_penalty?: number | null
+    /**
+     * Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model\'s likelihood to repeat the same line verbatim.  [See more information about frequency and presence penalties.](/docs/api-reference/parameter-details)
+     * @type {number}
+     * @memberof CreateChatCompletionRequest
+     */
+    frequency_penalty?: number | null
+    /**
+     * Modify the likelihood of specified tokens appearing in the completion.  Accepts a json object that maps tokens (specified by their token ID in the tokenizer) to an associated bias value from -100 to 100. Mathematically, the bias is added to the logits generated by the model prior to sampling. The exact effect will vary per model, but values between -1 and 1 should decrease or increase likelihood of selection; values like -100 or 100 should result in a ban or exclusive selection of the relevant token.
+     * @type {object}
+     * @memberof CreateChatCompletionRequest
+     */
+    logit_bias?: object | null
+    /**
+     * A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. [Learn more](/docs/guides/safety-best-practices/end-user-ids).
+     * @type {string}
+     * @memberof CreateChatCompletionRequest
+     */
+    user?: string
+  }
+  /**
+   * @type CreateChatCompletionRequestStop
+   * Up to 4 sequences where the API will stop generating further tokens.
+   * @export
+   */
+  export declare type CreateChatCompletionRequestStop = Array<string> | string
+  /**
+   *
+   * @export
+   * @interface CreateChatCompletionResponse
+   */
+  export interface CreateChatCompletionResponse {
+    /**
+     *
+     * @type {string}
+     * @memberof CreateChatCompletionResponse
+     */
+    id: string
+    /**
+     *
+     * @type {string}
+     * @memberof CreateChatCompletionResponse
+     */
+    object: string
+    /**
+     *
+     * @type {number}
+     * @memberof CreateChatCompletionResponse
+     */
+    created: number
+    /**
+     *
+     * @type {string}
+     * @memberof CreateChatCompletionResponse
+     */
+    model: string
+    /**
+     *
+     * @type {Array<CreateChatCompletionResponseChoicesInner>}
+     * @memberof CreateChatCompletionResponse
+     */
+    choices: Array<CreateChatCompletionResponseChoicesInner>
+    /**
+     *
+     * @type {CreateCompletionResponseUsage}
+     * @memberof CreateChatCompletionResponse
+     */
+    usage?: CreateCompletionResponseUsage
+  }
+  /**
+   *
+   * @export
+   * @interface CreateChatCompletionResponseChoicesInner
+   */
+  export interface CreateChatCompletionResponseChoicesInner {
+    /**
+     *
+     * @type {number}
+     * @memberof CreateChatCompletionResponseChoicesInner
+     */
+    index?: number
+    /**
+     *
+     * @type {ChatCompletionResponseMessage}
+     * @memberof CreateChatCompletionResponseChoicesInner
+     */
+    message?: ChatCompletionResponseMessage
+    /**
+     *
+     * @type {string}
+     * @memberof CreateChatCompletionResponseChoicesInner
+     */
+    finish_reason?: string
+  }
+  /**
+   *
+   * @export
+   * @interface CreateCompletionResponseUsage
+   */
+  export interface CreateCompletionResponseUsage {
+    /**
+     *
+     * @type {number}
+     * @memberof CreateCompletionResponseUsage
+     */
+    prompt_tokens: number
+    /**
+     *
+     * @type {number}
+     * @memberof CreateCompletionResponseUsage
+     */
+    completion_tokens: number
+    /**
+     *
+     * @type {number}
+     * @memberof CreateCompletionResponseUsage
+     */
+    total_tokens: number
+  }
 }

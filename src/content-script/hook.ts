@@ -2,6 +2,7 @@ import { stripHTMLTags, withCommandSatisfied, withContentLengthSatisfied } from 
 
 const botNickName: string = "gpt"
 let isFirstLogin = true;
+let triggerMode = 'atGPT'
 
 export async function pageScript() {
   console.clear();
@@ -23,20 +24,20 @@ export async function pageScript() {
     // 只监听文本消息
     const { MsgType, Content } = msg;
     if (MsgType === 1 && Content.length > 4) {
-      const text = stripHTMLTags(Content)
+      let text = stripHTMLTags(Content)
 
       // 判断是否有触发关键词
       if (!withCommandSatisfied(text, botNickName)) {
         return
       }
 
-      const content = text.replaceAll(`@${botNickName}`, '').trim()
-      if (!withContentLengthSatisfied(content)) {
+      text = text.replaceAll(`@${botNickName}`, '').trim()
+      if (!withContentLengthSatisfied(text)) {
         return
       }
 
       const newMessageEvent = new CustomEvent('filehelper:message:add', {
-        detail: { uuid: uuid, nickname: nickname, text: content }
+        detail: { uuid, nickname, text }
       })
 
       window.dispatchEvent(newMessageEvent)
@@ -76,6 +77,19 @@ export async function pageScript() {
         const store = await app.config.globalProperties.$store;
         if (e.detail && store.dispatch) {
           store.dispatch("sendMessage", e.detail);
+        }
+      },
+      false,
+    )
+
+    // 增加chatgpt回复消息的事件监听器
+    window.addEventListener('filehelper:setting:triggerModeChanged',
+      async (e: any) => {
+        console.debug(`Settings Changed: ${e.detail}`)
+        if (e.detail && e.detail.triggerMode === "always") {
+          triggerMode = 'alway'
+        } else {
+          triggerMode = 'atGPT'
         }
       },
       false,

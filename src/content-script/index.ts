@@ -1,5 +1,4 @@
 import ExpiryMap from 'expiry-map'
-import 'github-markdown-css'
 import Browser from 'webextension-polyfill'
 import { captureEvent, identify } from '../analytics'
 import { GptRateLimit, QueueThreshold, getUserConfig } from '../config'
@@ -10,8 +9,9 @@ const HAS_RATELIMIT = true
 const SHOW_COPYRIGHT = false
 
 // 提问次数限制
-let gptRateLimit: GptRateLimit = GptRateLimit.R5
+let gptRateLimit: GptRateLimit = GptRateLimit.NONE
 let queueThreshold: QueueThreshold = QueueThreshold.T5
+const RESET_QUEUE_THRESHOLD = 10
 const cache = new ExpiryMap(10 * 60 * 1000)
 const messageQueue: any[] = []
 let isProcessing = false
@@ -39,7 +39,7 @@ function callGpt(message: any) {
       reply(response)
       captureEvent('chatgpt:response:success', { ...response })
     } else if (response.error) {
-      response.reply = `抱歉出错啦，错误代码：${response.error}，请到开发者网站看一下吧https://chatgpt4filehelper.aow.me`
+      response.reply = `抱歉出错啦，错误代码：${response.error}，请到开发者网站看一下吧 https://chatgpt4wechat.com`
       reply(response)
       captureEvent('chatgpt:response:error', { ...response })
     } else {
@@ -54,6 +54,7 @@ function callGpt(message: any) {
     question: text,
   })
   return () => {
+    isProcessing = false
     port.onMessage.removeListener(listener)
     port.disconnect()
   }
@@ -79,10 +80,13 @@ function reply(response: any) {
   if (content && content.length > 0) {
     content = content.trim();
 
-    // 是否群组消息
+    // 是否加上版权信息
     if (SHOW_COPYRIGHT) {
       content = `${content}\n${COPYRIGHT}`
     }
+
+    // 回复内容中不能出现触发命令的关键字
+    content = content.replaceAll('@gpt', '')
 
     const msg = {
       MsgTypeText: MSGTYPE_TEXT,
@@ -146,6 +150,9 @@ window.addEventListener(
       // 如果队列长度超过阈值，发送一条消息告知当前排队问题数量
       if (messageQueue.length > queueThreshold) {
         notifyQueueStatus(messageQueue.length);
+      } else if (messageQueue.length > RESET_QUEUE_THRESHOLD) {
+        messageQueue.length = 0
+        callGpt(e.detail)
       }
     }
   },
@@ -166,7 +173,7 @@ function withRateLimitSatisfied(actualSender: string) {
 async function loadUserConfig() {
   let userConfig = await getUserConfig();
   // 提问次数频率限制
-  gptRateLimit = userConfig.gptRateLimit || GptRateLimit.R5
+  gptRateLimit = userConfig.gptRateLimit || GptRateLimit.NONE
   // 队列积压消息通报阈值
   queueThreshold = userConfig.queueThreshold || QueueThreshold.T5
 
@@ -175,13 +182,23 @@ async function loadUserConfig() {
     if (area === 'local' && changes.gptRateLimit?.newValue) {
       const newVaule = parseInt(changes.gptRateLimit.newValue);
       console.debug('New GptRateLimit Value', newVaule);
-      gptRateLimit = newVaule || GptRateLimit.R5
+      gptRateLimit = newVaule || GptRateLimit.NONE
     }
 
     if (area === 'local' && changes.queueThreshold?.newValue) {
       const newVaule = parseInt(changes.queueThreshold.newValue);
       console.debug('New QueueThreshold Value', newVaule);
       gptRateLimit = newVaule || QueueThreshold.T5
+    }
+
+    if (area === 'local' && changes.triggerMode?.newValue) {
+      const newVaule = changes.triggerMode.newValue;
+      console.debug('New TriggerMode Value', newVaule);
+      const event = new CustomEvent('filehelper:setting:triggerModeChanged', {
+        detail: { triggerMode: newVaule },
+      })
+
+      window.dispatchEvent(event)
     }
   });
 }
