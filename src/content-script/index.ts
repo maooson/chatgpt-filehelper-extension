@@ -108,7 +108,7 @@ function reply(response: any) {
 function notifyQueueStatus(queueLength: number) {
   const msg = {
     MsgTypeText: MSGTYPE_TEXT,
-    Content: `哎呀，我还有${queueLength}个问题要回答呢，让我歇会儿吧~~`,
+    Content: `哎呀，我还有 ${queueLength} 个问题要回答呢，让我歇会儿吧~~`,
   }
 
   const event = new CustomEvent('filehelper:message:gpt_reply', {

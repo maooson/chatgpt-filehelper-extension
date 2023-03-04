@@ -10,3 +10,7 @@ export function detectSystemColorScheme() {
 export function getExtensionVersion() {
   return Browser.runtime.getManifest().version
 }
+
+export function getExtensionId() {
+  return Browser.runtime.id
+}

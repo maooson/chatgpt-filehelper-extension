@@ -6,6 +6,7 @@ import { ChatGPTAPI } from './providers/chatgpt-api.js'
 import * as types from './types'
 import Keyv from 'keyv'
 import QuickLRU from 'quick-lru'
+import { fetchConfig } from '../api.js'
 
 // 同一个conversation的会话保持时间
 const threadCache = new ExpiryMap(30 * 60 * 1000)
@@ -110,11 +111,22 @@ Browser.runtime.onMessage.addListener(async (message: any) => {
     Browser.runtime.openOptionsPage()
   } else if (message.type === 'GET_ACCESS_TOKEN') {
     return getAccessToken()
+  } else if (message.type === 'CHECK_API_STATE') {
+    const apiKey = message.data
+    const api = new ChatGPTAPI({ apiKey, debug: true })
+    return await api.checkUsage()
   }
 })
 
 Browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     Browser.runtime.openOptionsPage()
+
+    fetchConfig().then((res) => {
+      console.debug('Load extension config: ', res)
+      Browser.storage.local.set(res);
+    }).catch(err => {
+      console.error(err);
+    })
   }
 })

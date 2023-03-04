@@ -110,6 +110,37 @@ export class ChatGPTAPI {
     }
   }
 
+  async checkUsage() {
+    return new Promise<{}>(
+      async (resolve, reject) => {
+        const url = `${this._apiBaseUrl}/v1/usage`
+        const headers = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this._apiKey}`
+        }
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers,
+        })
+
+        if (!res.ok) {
+          const reason = await res.text()
+          const msg = `OpenAI error ${res.status || res.statusText
+            }: ${reason}`
+          const error = new types.ChatGPTError(msg, { cause: res })
+          error.statusCode = res.status
+          error.statusText = res.statusText
+          return reject(error)
+        }
+
+        return resolve(res.json())
+      }
+    ).then((data) => {
+      return data
+    })
+  }
+
   /**
    * Sends a message to the OpenAI chat completions endpoint, waits for the response
    * to resolve, and returns the response.
