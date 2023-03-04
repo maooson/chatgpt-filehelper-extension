@@ -44,10 +44,10 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
         <Tabs.Item  label="ChatGPT网页端" value={ProviderType.ChatGPTWeb}>
           通过ChatGPT网页端接入，免费，但接口不够稳定
         </Tabs.Item>
-        <Tabs.Item label="OpenAI API" value={ProviderType.ChatGPTAPI}>
+        <Tabs.Item label="ChatGPT API" value={ProviderType.ChatGPTAPI}>
           <div className="flex flex-col gap-2">
             <span>
-              通过OpenAI官方API接入，比较稳定{' '}
+              通过ChatGPT API接入，比较稳定{' '}
               <span className="font-semibold">需要按需付费</span>
             </span>
             <div className="flex flex-col gap-2">
@@ -60,7 +60,7 @@ const ConfigPanel: FC<ConfigProps> = ({ config, models }) => {
               />
             </div>
             <span className="italic text-xs">
-              如何获取或创建你的OpenAI API key，请点击{' '}
+              如何获取或创建你的ChatGPT API Key，请点击{' '}
               <a
                 href="https://platform.openai.com/account/api-keys"
                 target="_blank"

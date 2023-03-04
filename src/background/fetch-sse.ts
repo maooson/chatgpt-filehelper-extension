@@ -15,7 +15,8 @@ export async function fetchSSE(
     let reason: string
 
     try {
-      reason = await res.text()
+      const response = await res.json()
+      reason = response?.error?.code
     } catch (err) {
       reason = res.statusText
     }

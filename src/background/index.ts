@@ -9,7 +9,7 @@ import QuickLRU from 'quick-lru'
 
 // 同一个conversation的会话保持时间
 const threadCache = new ExpiryMap(30 * 60 * 1000)
-const DEFAULT_SYSTEM_MESSAGE = '现在你是一个在微信群的AI助手，你的名字是ChatGirl，Powered by chatgpt4wechat.com';
+const DEFAULT_SYSTEM_MESSAGE = '现在你是一个微信AI助手，由chatgpt4wechat.com提供技术支持';
 const messageStore = new Keyv<types.ChatMessage, any>({
   namespace: 'c4w',
   store: new QuickLRU<string, types.ChatMessage>({ maxSize: 1000 }),
